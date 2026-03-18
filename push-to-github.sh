@@ -29,13 +29,15 @@ echo -e "${BOLD}╚════════════════════�
 read -rp "  GitHub username: " GH_USER
 [ -z "$GH_USER" ] && { echo "Username tidak boleh kosong."; exit 1; }
 
-REPO_URL="https://github.com/$GH_USER/infraautomation.git"
+read -rp "  Nama repository GitHub (default: infraautomation): " REPO_NAME
+REPO_NAME="${REPO_NAME:-infraautomation}"
+REPO_URL="https://github.com/$GH_USER/$REPO_NAME.git"
 
 echo ""
 echo -e "  Repository yang akan dibuat: ${CYAN}$REPO_URL${NC}"
 echo ""
-echo -e "  ${YELLOW}Pastikan repository 'infraautomation' sudah dibuat di GitHub:${NC}"
-echo -e "  https://github.com/new → Repository name: infraautomation"
+echo -e "  ${YELLOW}Pastikan repository '$REPO_NAME' sudah dibuat di GitHub:${NC}"
+echo -e "  https://github.com/new → Repository name: $REPO_NAME"
 echo -e "  Pilih: Public, jangan centang 'Initialize this repository'"
 echo ""
 read -rp "  Sudah dibuat? (tekan Enter untuk lanjut)" _
@@ -45,11 +47,26 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 if [ -d ".git" ]; then
-  warn "Repository sudah di-init. Skip git init."
+  # Fix possible permission issue if .git was created by another user (e.g. root in container)
+  if ! git config --local user.name &>/dev/null; then
+    warn ".git ada tapi tidak bisa dibaca/ditulis — coba fix permission..."
+    sudo chown -R "$(whoami)" .git 2>/dev/null \
+      || { warn "sudo gagal, coba manual: sudo chown -R \$(whoami) .git"; exit 1; }
+    ok "Permission .git diperbaiki"
+  else
+    warn "Repository sudah di-init. Skip git init."
+  fi
 else
   log "git init..."
   git init
   ok "git init selesai"
+fi
+
+# Pastikan git user dikonfigurasi
+if ! git config --global user.email &>/dev/null; then
+  read -rp "  Git email (untuk commit): " GIT_EMAIL
+  git config --global user.email "${GIT_EMAIL:-lks2026@example.com}"
+  git config --global user.name "${GH_USER}"
 fi
 
 log "git add semua file..."
@@ -67,10 +84,11 @@ ok "Commit selesai"
 log "Set branch main..."
 git branch -M main
 
-log "Set remote origin..."
+log "Set remote origin ke $REPO_URL..."
 if git remote get-url origin &>/dev/null; then
-  git remote set-url origin "$REPO_URL"
-  warn "Remote origin sudah ada, diupdate ke: $REPO_URL"
+  git remote set-url origin "$REPO_URL" \
+    && ok "Remote origin diupdate: $REPO_URL" \
+    || { warn "Gagal set-url, coba remove dulu..."; git remote remove origin; git remote add origin "$REPO_URL"; ok "Remote origin di-reset: $REPO_URL"; }
 else
   git remote add origin "$REPO_URL"
   ok "Remote origin ditambahkan: $REPO_URL"
@@ -83,7 +101,7 @@ echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}${BOLD}║  Kode berhasil di-push ke GitHub!               ║${NC}"
 echo -e "${GREEN}${BOLD}╠══════════════════════════════════════════════════╣${NC}"
-echo -e "${BOLD}║${NC}  URL: ${CYAN}https://github.com/$GH_USER/infraautomation${NC}"
+echo -e "${BOLD}║${NC}  URL: ${CYAN}https://github.com/$GH_USER/$REPO_NAME${NC}"
 echo -e "${BOLD}║${NC}"
 echo -e "${BOLD}║${NC}  Langkah berikutnya:"
 echo -e "${BOLD}║${NC}  1. Buka GitHub → Settings → Collaborators"

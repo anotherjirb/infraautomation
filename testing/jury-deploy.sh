@@ -216,6 +216,24 @@ log "terraform apply..."
 terraform apply -auto-approve tfplan 2>&1 | tee -a "$LOG_FILE"
 ok "terraform apply selesai"
 
+# Read all terraform outputs immediately after apply
+log "Membaca terraform outputs..."
+VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
+MON_VPC_ID=$(terraform output -raw monitoring_vpc_id 2>/dev/null || echo "")
+PEERING_ID=$(terraform output -raw peering_connection_id 2>/dev/null || echo "")
+PEERING_STATUS=$(terraform output -raw peering_connection_status 2>/dev/null || echo "")
+ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
+SG_ECS=$(terraform output -raw sg_ecs_id 2>/dev/null || echo "")
+SG_MON=$(terraform output -raw sg_monitoring_oregon_id 2>/dev/null || echo "")
+TG_FE=$(terraform output -raw tg_fe_arn 2>/dev/null || echo "")
+TG_API=$(terraform output -raw tg_api_arn 2>/dev/null || echo "")
+PRIVATE_SUBNETS=$(terraform output -json private_subnet_ids 2>/dev/null | jq -r '[.[]] | join(",")' || echo "")
+ALL_MON_SUBNETS=$(terraform output -json monitoring_subnet_ids 2>/dev/null | jq -r '[.[]] | join(",")' || echo "")
+RDS_ENDPOINT=$(terraform output -raw rds_endpoint 2>/dev/null | cut -d: -f1 || echo "localhost")
+[ -n "$VPC_ID" ]       && ok "VPC: $VPC_ID"          || warn "VPC output kosong"
+[ -n "$ALB_DNS" ]      && ok "ALB: $ALB_DNS"          || warn "ALB output kosong"
+[ -n "$PEERING_STATUS" ] && ok "Peering: $PEERING_STATUS" || warn "Peering output kosong"
+
 # Ensure route 10.1.0.0/16 exists in lks-private-rt (Virginia)
 log "Verifikasi route 10.1.0.0/16 di lks-private-rt..."
 PRIV_RT=$(aws ec2 describe-route-tables \
@@ -250,16 +268,15 @@ fi
 
 # Ensure TCP 9100 rule exists in lks-sg-ecs (sometimes missed if SG pre-existed)
 log "Verifikasi rule TCP 9100 di lks-sg-ecs..."
-SG_ECS_CHECK=$(terraform output -raw sg_ecs_id 2>/dev/null || echo "")
-if [ -n "$SG_ECS_CHECK" ]; then
+if [ -n "$SG_ECS" ]; then
   RULE_EXISTS=$(aws ec2 describe-security-groups \
-    --group-ids "$SG_ECS_CHECK" \
+    --group-ids "$SG_ECS" \
     --query "SecurityGroups[0].IpPermissions[?FromPort==\`9100\`] | length(@)" \
     --output text --region us-east-1 2>/dev/null || echo "0")
   if [ "${RULE_EXISTS:-0}" -eq 0 ]; then
     warn "TCP 9100 rule tidak ada — menambahkan manual..."
     aws ec2 authorize-security-group-ingress \
-      --group-id "$SG_ECS_CHECK" \
+      --group-id "$SG_ECS" \
       --protocol tcp --port 9100 \
       --cidr "10.1.0.0/16" \
       --region us-east-1 2>/dev/null \
@@ -271,11 +288,6 @@ if [ -n "$SG_ECS_CHECK" ]; then
 fi
 
 # Read outputs
-VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
-ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
-SG_ECS=$(terraform output -raw sg_ecs_id 2>/dev/null || echo "")
-SG_MON=$(terraform output -raw sg_monitoring_oregon_id 2>/dev/null || echo "")
-PRIVATE_SUBNETS=$(terraform output -json private_subnet_ids 2>/dev/null | jq -r '.[]' | head -1 || echo "")
 MON_SUBNETS=$(terraform output -json monitoring_subnet_ids 2>/dev/null | jq -r '.[]' | head -1 || echo "")
 PEERING_STATUS=$(terraform output -raw peering_connection_status 2>/dev/null || echo "")
 TG_FE=$(terraform output -raw tg_fe_arn 2>/dev/null || echo "")
@@ -347,7 +359,6 @@ FE_TD=$(aws ecs register-task-definition \
 ok "Task Definition lks-fe-task: $FE_TD"
 
 # Task Definition: API
-RDS_ENDPOINT=$(cd "$TF_DIR" && terraform output -raw rds_endpoint 2>/dev/null | cut -d: -f1 || echo "localhost")
 API_TD=$(aws ecs register-task-definition \
   --family lks-api-task \
   --network-mode awsvpc \

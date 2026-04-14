@@ -1,0 +1,58 @@
+{
+    "family": "lks-fe-task-definition",
+    "containerDefinitions": [
+        {
+            "name": "fe",
+            "image": "053884104777.dkr.ecr.us-east-1.amazonaws.com/lks-fe-app",
+            "cpu": 256,
+            "memory": 512,
+            "portMappings": [
+                {
+                    "name": "fe-3000-tcp",
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/lks-fe-task-definition",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-west-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::053884104777:role/LabRole",
+    "executionRoleArn": "arn:aws:iam::053884104777:role/LabRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false,
+    "tags": [
+        {
+            "key": "Name",
+            "value": "lks-fe-task-definition"
+        }
+    ]
+}

@@ -145,3 +145,55 @@ resource "aws_ssm_parameter" "dynamo_table" {
   overwrite = true
   tags      = { Name = "lks-ssm-dynamo-table" }
 }
+
+resource "aws_sns_topic" "this" {
+  name = "lks-alerts"
+}
+
+resource "aws_sns_topic_subscription" "this" {
+  topic_arn = aws_sns_topic.this.arn
+  protocol  = "email"
+  endpoint = "hansjabriel@gmail.com"
+}
+
+resource "aws_cloudwatch_log_group" "ecs-fe" {
+  name = "/ecs/lks-fe-app"
+  retention_in_days = "7"
+
+  tags = {
+    Environment = "production"
+    Application = "/ecs/lks-fe-app"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "ecs-api" {
+  name = "/ecs/lks-api-app"
+  retention_in_days = "7"
+
+  tags = {
+    Environment = "production"
+    Application = "/ecs/lks-api-app"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "analytics" {
+  name = "/ecs/lks-analytics-app"
+  retention_in_days = "7"
+
+  tags = {
+    Environment = "production"
+    Application = "/ecs/lks-analytics-app "
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "this" {
+  alarm_name                = "lks-elb-failure-alarm"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = 2
+  metric_name               = "HTTPCode_ELB_5XX_Count"
+  namespace                 = "AWS/ApplicationELB"
+  period                    = 120
+  statistic                 = "Average"
+  threshold                 = 50
+  alarm_description         = "This metric monitors ALB Failure"
+}

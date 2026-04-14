@@ -1,0 +1,102 @@
+{
+    "family": "lks-api-task-definition",
+    "containerDefinitions": [
+        {
+            "name": "api",
+            "image": "053884104777.dkr.ecr.us-east-1.amazonaws.com/lks-fe-app",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "api-80-tcp",
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-east-1"
+                },
+                {
+                    "name": "SQS_QUEUE_URL",
+                    "value": "https://sqs.us-east-1.amazonaws.com/053884104777/lks-event-queue"
+                },
+                {
+                    "name": "DB_SSL",
+                    "value": "false"
+                },
+                {
+                    "name": "PORT",
+                    "value": "8080"
+                },
+                {
+                    "name": "DB_PORT",
+                    "value": "5432"
+                },
+                {
+                    "name": "DB_USER",
+                    "value": "lksadmin"
+                },
+                {
+                    "name": "DB_NAME",
+                    "value": "lksdb"
+                },
+                {
+                    "name": "METRICS_PORT",
+                    "value": "9100"
+                },
+                {
+                    "name": "DB_HOST",
+                    "value": "lks-rds-postgres.cogw81gc9vl1.us-east-1.rds.amazonaws.com"
+                },
+                {
+                    "name": "CORS_ORIGIN",
+                    "value": "lks-alb-1514275397.us-east-1.elb.amazonaws.com"
+                },
+                {
+                    "name": "DB_PASSWORD",
+                    "value": "LKSSecure2026!"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/lks-api-task-definition",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-west-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::053884104777:role/LabRole",
+    "executionRoleArn": "arn:aws:iam::053884104777:role/LabRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false,
+    "tags": [
+        {
+            "key": "Name",
+            "value": "lks-api-task-definition"
+        }
+    ]
+}

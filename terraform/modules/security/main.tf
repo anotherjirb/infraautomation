@@ -47,7 +47,7 @@ resource "aws_security_group" "ecs" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.alb.id]
   }
   ingress {
     from_port   = 9100
@@ -78,6 +78,13 @@ resource "aws_security_group" "db" {
   description = "Database allow access from ECS only"
   vpc_id      = var.vpc_id
   tags        = { Name = "lks-sg-db" }
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
 
   egress {
     from_port   = 0
